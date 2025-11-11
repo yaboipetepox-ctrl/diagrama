@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema CTTS - Modelado de Procesos</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const CTTSDiagrams = () => {
+            const [selectedView, setSelectedView] = useState('eventos');
+
+            const eventos = [
+                {
+                    id: 1,
+                    nombre: "Entrar Solicitud de Servicio",
+                    actores: ["Cliente", "Técnicos", "Recepcionista/Archivista"],
+                    trigger: "A solicitud del cliente",
+                    entradas: ["Datos del cliente", "Descripción del problema", "Equipo afectado"],
+                    proceso: "Procesar Solicitud de Servicio",
+                    salidas: ["Solicitud de servicio creada", "Número de ticket"],
+                    almacen: "BD Solicitudes de Servicio"
+                },
+                {
+                    id: 2,
+                    nombre: "Ver Solicitudes Sin Resolver/Histórico",
+                    actores: ["Cliente", "Técnicos", "Gerencia"],
+                    trigger: "A solicitud",
+                    entradas: ["Criterios de búsqueda", "ID de solicitud"],
+                    proceso: "Consultar Solicitudes",
+                    salidas: ["Información de solicitudes", "Histórico de trabajos"],
+                    almacen: "BD Solicitudes de Servicio, BD Registros de Trabajo"
+                },
+                {
+                    id: 3,
+                    nombre: "Entrar Registro de Trabajo",
+                    actores: ["Técnicos"],
+                    trigger: "Técnicos realizan trabajo",
+                    entradas: ["ID de solicitud", "Descripción del trabajo", "Tiempo empleado"],
+                    proceso: "Registrar Trabajo Realizado",
+                    salidas: ["Registro de trabajo creado", "Confirmación"],
+                    almacen: "BD Registros de Trabajo"
+                },
+                {
+                    id: 4,
+                    nombre: "Resolver Solicitud Manualmente",
+                    actores: ["Técnicos"],
+                    trigger: "Cuando problema sea resuelto",
+                    entradas: ["ID de solicitud", "Fecha de resolución"],
+                    proceso: "Actualizar Estado de Solicitud",
+                    salidas: ["Solicitud marcada como resuelta"],
+                    almacen: "BD Solicitudes de Servicio"
+                },
+                {
+                    id: 5,
+                    nombre: "Resolver Solicitud Automáticamente",
+                    actores: ["Sistema (Time)"],
+                    trigger: "48 horas después del último registro",
+                    entradas: ["Timestamp del último registro"],
+                    proceso: "Auto-Resolver Solicitud",
+                    salidas: ["Email al cliente", "Solicitud resuelta si no hay respuesta en 24h"],
+                    almacen: "BD Solicitudes de Servicio"
+                },
+                {
+                    id: 6,
+                    nombre: "Entrar Información del Componente",
+                    actores: ["Técnicos"],
+                    trigger: "Nuevo componente instalado",
+                    entradas: ["Datos del componente", "ID del equipo", "Tipo de componente"],
+                    proceso: "Registrar Componente",
+                    salidas: ["Componente creado en BD"],
+                    almacen: "BD Componentes de Equipo"
+                },
+                {
+                    id: 7,
+                    nombre: "Entrar Nuevo Equipo",
+                    actores: ["Técnicos"],
+                    trigger: "Nuevo equipo instalado para el cliente",
+                    entradas: ["Datos del equipo", "ID del cliente", "Tipo de equipo"],
+                    proceso: "Registrar Equipo",
+                    salidas: ["Equipo creado en BD"],
+                    almacen: "BD Equipos"
+                },
+                {
+                    id: 8,
+                    nombre: "Ver Info Configuración de Software",
+                    actores: ["Técnicos"],
+                    trigger: "A solicitud con palabras clave",
+                    entradas: ["Criterios de búsqueda", "Palabras clave"],
+                    proceso: "Consultar Configuración",
+                    salidas: ["Información de configuración"],
+                    almacen: "BD Configuración"
+                },
+                {
+                    id: 9,
+                    nombre: "Entrada en Inventario",
+                    actores: ["Recepcionista/Archivista"],
+                    trigger: "Llegada de inventario",
+                    entradas: ["Datos del inventario", "Cantidad", "Tipo de producto"],
+                    proceso: "Registrar Inventario",
+                    salidas: ["Inventario creado en BD"],
+                    almacen: "BD Inventario"
+                },
+                {
+                    id: 10,
+                    nombre: "Entrar Info Configuración",
+                    actores: ["Técnicos"],
+                    trigger: "Nueva o revisada configuración",
+                    entradas: ["Datos de configuración", "ID del equipo"],
+                    proceso: "Actualizar Configuración",
+                    salidas: ["Configuración actualizada"],
+                    almacen: "BD Configuración"
+                },
+                {
+                    id: 11,
+                    nombre: "Ver Componentes Instalados",
+                    actores: ["Técnicos"],
+                    trigger: "A solicitud con criterio de equipo",
+                    entradas: ["ID del equipo"],
+                    proceso: "Consultar Componentes",
+                    salidas: ["Información de componentes"],
+                    almacen: "BD Componentes de Equipo"
+                },
+                {
+                    id: 12,
+                    nombre: "Entrar/Editar Tipo de Equipo",
+                    actores: ["Cualquier empleado"],
+                    trigger: "Lista de tipos necesita actualización",
+                    entradas: ["Datos del tipo de equipo"],
+                    proceso: "Actualizar Tipo de Equipo",
+                    salidas: ["Tipo de equipo actualizado"],
+                    almacen: "BD Tipos de Equipo"
+                },
+                {
+                    id: 13,
+                    nombre: "Entrar/Editar Tipo de Componente",
+                    actores: ["Cualquier empleado"],
+                    trigger: "Lista de tipos necesita cambios",
+                    entradas: ["Datos del tipo de componente"],
+                    proceso: "Actualizar Tipo de Componente",
+                    salidas: ["Tipo de componente actualizado"],
+                    almacen: "BD Tipos de Componente"
+                },
+                {
+                    id: 14,
+                    nombre: "Entrar Nuevo Cliente",
+                    actores: ["Recepcionista/Archivista"],
+                    trigger: "Nuevo cliente firma contrato",
+                    entradas: ["Datos del cliente", "Información del contrato"],
+                    proceso: "Registrar Cliente",
+                    salidas: ["Cliente agregado en BD"],
+                    almacen: "BD Clientes"
+                }
+            ];
+
+            const EventDiagram = ({ evento }) => (
+                <div className="border-2 border-blue-500 rounded-lg p-6 bg-white shadow-lg mb-6">
+                    <h3 className="text-lg font-bold text-blue-800 mb-4">
+                        {evento.nombre}
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                            <div>
+                                <p className="text-sm font-semibold text-gray-600">Actores:</p>
+                                <p className="text-sm">{evento.actores.join(", ")}</p>
+                            </div>
+                            
+                            <div>
+                                <p className="text-sm font-semibold text-gray-600">Trigger:</p>
+                                <p className="text-sm">{evento.trigger}</p>
+                            </div>
+                            
+                            <div>
+                                <p className="text-sm font-semibold text-gray-600">Entradas:</p>
+                                <ul className="text-sm list-disc list-inside ml-4">
+                                    {evento.entradas.map((entrada, idx) => (
+                                        <li key={idx}>{entrada}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                            <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                                <p className="text-sm font-semibold text-blue-700 mb-1">Proceso:</p>
+                                <p className="text-sm font-bold">{evento.proceso}</p>
+                            </div>
+                            
+                            <div>
+                                <p className="text-sm font-semibold text-gray-600">Salidas:</p>
+                                <ul className="text-sm list-disc list-inside ml-4">
+                                    {evento.salidas.map((salida, idx) => (
+                                        <li key={idx}>{salida}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <p className="text-sm font-semibold text-gray-600">Almacén de Datos:</p>
+                                <p className="text-sm font-medium">{evento.almacen}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+
+            const DFDDiagram = () => (
+                <div className="bg-white p-6 rounded-lg">
+                    <svg viewBox="0 0 1400 1800" className="w-full h-auto border border-gray-300 rounded">
+                        <text x="700" y="30" textAnchor="middle" className="text-2xl font-bold" fill="#1e40af">
+                            Diagrama de Flujo de Datos - Sistema CTTS
+                        </text>
+                        
+                        {/* Entidades Externas */}
+                        <rect x="50" y="80" width="150" height="80" fill="#dbeafe" stroke="#3b82f6" strokeWidth="3"/>
+                        <text x="125" y="115" textAnchor="middle" className="text-sm font-bold">Cliente</text>
+                        <text x="125" y="135" textAnchor="middle" className="text-xs">(Entidad Externa)</text>
+                        
+                        <rect x="1200" y="80" width="150" height="80" fill="#dbeafe" stroke="#3b82f6" strokeWidth="3"/>
+                        <text x="1275" y="115" textAnchor="middle" className="text-sm font-bold">Técnicos</text>
+                        <text x="1275" y="135" textAnchor="middle" className="text-xs">(Entidad Externa)</text>
+                        
+                        <rect x="50" y="900" width="150" height="80" fill="#dbeafe" stroke="#3b82f6" strokeWidth="3"/>
+                        <text x="125" y="935" textAnchor="middle" className="text-sm font-bold">Recepcionista/</text>
+                        <text x="125" y="955" textAnchor="middle" className="text-sm font-bold">Archivista</text>
+                        
+                        <rect x="1200" y="900" width="150" height="80" fill="#dbeafe" stroke="#3b82f6" strokeWidth="3"/>
+                        <text x="1275" y="935" textAnchor="middle" className="text-sm font-bold">Gerencia</text>
+                        <text x="1275" y="955" textAnchor="middle" className="text-xs">(Entidad Externa)</text>
+                        
+                        <rect x="50" y="1600" width="150" height="80" fill="#dbeafe" stroke="#3b82f6" strokeWidth="3"/>
+                        <text x="125" y="1635" textAnchor="middle" className="text-sm font-bold">Sistema Time</text>
+                        <text x="125" y="1655" textAnchor="middle" className="text-xs">(Automatizado)</text>
+                        
+                        {/* Procesos Principales */}
+                        <circle cx="450" cy="250" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="450" y="240" textAnchor="middle" className="text-xs font-bold">1.0</text>
+                        <text x="450" y="260" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="450" y="275" textAnchor="middle" className="text-sm font-bold">Solicitudes</text>
+                        
+                        <circle cx="950" cy="250" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="950" y="240" textAnchor="middle" className="text-xs font-bold">2.0</text>
+                        <text x="950" y="260" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="950" y="275" textAnchor="middle" className="text-sm font-bold">Trabajos</text>
+                        
+                        <circle cx="450" cy="550" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="450" y="540" textAnchor="middle" className="text-xs font-bold">3.0</text>
+                        <text x="450" y="560" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="450" y="575" textAnchor="middle" className="text-sm font-bold">Equipos</text>
+                        
+                        <circle cx="950" cy="550" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="950" y="540" textAnchor="middle" className="text-xs font-bold">4.0</text>
+                        <text x="950" y="560" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="950" y="575" textAnchor="middle" className="text-sm font-bold">Componentes</text>
+                        
+                        <circle cx="450" cy="850" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="450" y="840" textAnchor="middle" className="text-xs font-bold">5.0</text>
+                        <text x="450" y="860" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="450" y="875" textAnchor="middle" className="text-sm font-bold">Configuración</text>
+                        
+                        <circle cx="950" cy="850" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="950" y="840" textAnchor="middle" className="text-xs font-bold">6.0</text>
+                        <text x="950" y="860" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="950" y="875" textAnchor="middle" className="text-sm font-bold">Inventario</text>
+                        
+                        <circle cx="450" cy="1150" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="450" y="1140" textAnchor="middle" className="text-xs font-bold">7.0</text>
+                        <text x="450" y="1160" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="450" y="1175" textAnchor="middle" className="text-sm font-bold">Clientes</text>
+                        
+                        <circle cx="950" cy="1150" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="950" y="1140" textAnchor="middle" className="text-xs font-bold">8.0</text>
+                        <text x="950" y="1160" textAnchor="middle" className="text-sm font-bold">Gestionar</text>
+                        <text x="950" y="1175" textAnchor="middle" className="text-sm font-bold">Tipos</text>
+                        
+                        <circle cx="700" cy="1500" r="80" fill="#fef3c7" stroke="#f59e0b" strokeWidth="3"/>
+                        <text x="700" y="1490" textAnchor="middle" className="text-xs font-bold">9.0</text>
+                        <text x="700" y="1510" textAnchor="middle" className="text-sm font-bold">Auto-Resolver</text>
+                        <text x="700" y="1525" textAnchor="middle" className="text-sm font-bold">Solicitudes</text>
+                        
+                        {/* Almacenes de Datos */}
+                        <rect x="250" y="380" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="450" y="405" textAnchor="middle" className="text-sm">D1: Solicitudes de Servicio</text>
+                        
+                        <rect x="750" y="380" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="950" y="405" textAnchor="middle" className="text-sm">D2: Registros de Trabajo</text>
+                        
+                        <rect x="250" y="680" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="450" y="705" textAnchor="middle" className="text-sm">D3: Equipos</text>
+                        
+                        <rect x="750" y="680" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="950" y="705" textAnchor="middle" className="text-sm">D4: Componentes</text>
+                        
+                        <rect x="250" y="980" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="450" y="1005" textAnchor="middle" className="text-sm">D5: Configuración</text>
+                        
+                        <rect x="750" y="980" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="950" y="1005" textAnchor="middle" className="text-sm">D6: Inventario</text>
+                        
+                        <rect x="250" y="1280" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="450" y="1305" textAnchor="middle" className="text-sm">D7: Clientes</text>
+                        
+                        <rect x="750" y="1280" width="400" height="40" fill="white" stroke="#8b5cf6" strokeWidth="2"/>
+                        <text x="950" y="1305" textAnchor="middle" className="text-sm">D8: Tipos (Equipo/Componente)</text>
+                        
+                        {/* Flujos de Datos */}
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#374151" />
+                            </marker>
+                        </defs>
+                        
+                        <line x1="200" y1="120" x2="370" y2="220" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="280" y="160" className="text-xs">Solicitud</text>
+                        
+                        <line x1="450" y1="330" x2="450" y2="380" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="460" y="360" className="text-xs">Guardar</text>
+                        
+                        <line x1="530" y1="250" x2="870" y2="250" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="680" y="240" className="text-xs">Info Solicitud</text>
+                        
+                        <line x1="1120" y1="220" x2="1020" y2="250" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="1080" y="220" className="text-xs">Registro</text>
+                        
+                        <line x1="950" y1="330" x2="950" y2="380" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="960" y="360" className="text-xs">Guardar</text>
+                        
+                        <line x1="1120" y1="500" x2="520" y2="530" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="800" y="510" className="text-xs">Info Equipo</text>
+                        
+                        <line x1="450" y1="630" x2="450" y2="680" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="460" y="660" className="text-xs">Guardar</text>
+                        
+                        <line x1="1120" y1="550" x2="1020" y2="550" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="1080" y="540" className="text-xs">Componente</text>
+                        
+                        <line x1="950" y1="630" x2="950" y2="680" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="960" y="660" className="text-xs">Guardar</text>
+                        
+                        <line x1="1120" y1="800" x2="520" y2="830" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="800" y="810" className="text-xs">Config</text>
+                        
+                        <line x1="450" y1="930" x2="450" y2="980" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="460" y="960" className="text-xs">Guardar</text>
+                        
+                        <line x1="200" y1="940" x2="870" y2="870" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="500" y="900" className="text-xs">Inventario</text>
+                        
+                        <line x1="950" y1="930" x2="950" y2="980" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="960" y="960" className="text-xs">Guardar</text>
+                        
+                        <line x1="200" y1="1100" x2="380" y2="1130" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="280" y="1110" className="text-xs">Cliente</text>
+                        
+                        <line x1="450" y1="1230" x2="450" y2="1280" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="460" y="1260" className="text-xs">Guardar</text>
+                        
+                        <line x1="1120" y1="1100" x2="1020" y2="1130" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="1080" y="1110" className="text-xs">Tipos</text>
+                        
+                        <line x1="950" y1="1230" x2="950" y2="1280" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="960" y="1260" className="text-xs">Guardar</text>
+                        
+                        <line x1="200" y1="1640" x2="620" y2="1540" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="380" y="1580" className="text-xs">Trigger 48h</text>
+                        
+                        <line x1="650" y1="1420" x2="450" y2="420" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="540" y="900" className="text-xs">Actualizar</text>
+                        
+                        <line x1="750" y1="1500" x2="200" y2="150" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="450" y="800" className="text-xs">Email</text>
+                        
+                        <line x1="1200" y1="200" x2="530" y2="280" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="850" y="230" className="text-xs">Consultar</text>
+                        
+                        <line x1="1200" y1="940" x2="1020" y2="260" stroke="#374151" strokeWidth="2" markerEnd="url(#arrowhead)"/>
+                        <text x="1110" y="600" className="text-xs">Ver Info</text>
+                    </svg>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-2xl p-8 mb-8">
+                            <h1 className="text-4xl font-bold text-center text-indigo-900 mb-2">
+                                Sistema CTTS - Modelado de Procesos
+                            </h1>
+                            <p className="text-center text-gray-600 mb-6">
+                                Diagramas de Eventos y Diagrama de Flujo de Datos
+                            </p>
+                            
+                            <div className="flex justify-center gap-4 mb-8">
+                                <button
+                                    onClick={() => setSelectedView('eventos')}
+                                    className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                                        selectedView === 'eventos'
+                                            ? 'bg-indigo-600 text-white shadow-lg'
+                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                >
+                                    Diagramas de Eventos (14)
+                                </button>
+                                <button
+                                    onClick={() => setSelectedView('dfd')}
+                                    className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                                        selectedView === 'dfd'
+                                            ? 'bg-indigo-600 text-white shadow-lg'
+                                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                >
+                                    Diagrama de Flujo de Datos (DFD)
+                                </button>
+                            </div>
+                        </div>
+
+                        {selectedView === 'eventos' ? (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                                    <h2 className="text-2xl font-bold text-indigo-800 mb-4">Supuestos del Sistema:</h2>
+                                    <ul className="list-disc list-inside space-y-2 text-gray-700">
+                                        <li>El sistema mantiene una base de datos centralizada para todos los procesos</li>
+                                        <li>Los técnicos tienen acceso a dispositivos móviles o computadoras para registrar trabajos en tiempo real</li>
+                                        <li>El sistema envía notificaciones automáticas por email</li>
+                                        <li>Existe un proceso de autenticación para cada tipo de actor</li>
+                                        <li>Las solicitudes tienen estados: Abierta, En Proceso, Resuelta, Cerrada</li>
+                                        <li>El sistema mantiene un histórico completo de todas las transacciones</li>
+                                        <li>Los clientes pueden tener múltiples equipos registrados</li>
+                                        <li>Cada equipo puede tener múltiples componentes</li>
+                                        <li>El inventario se relaciona con los componentes disponibles para instalación</li>
+                                        <li>El sistema valida la integridad referencial entre entidades (Cliente-Equipo-Componente)</li>
+                                    </ul>
+                                </div>
+                                
+                                {eventos.map(evento => (
+                                    <EventDiagram key={evento.id} evento={evento} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="bg-white rounded-lg shadow-2xl p-6">
+                                <h2 className="text-2xl font-bold text-indigo-800 mb-6">
+                                    Diagrama de Flujo de Datos Completo - Nivel 0
+                                </h2>
+                                <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4">
+                                    <h3 className="font-bold text-blue-900 mb-2">Leyenda:</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                        <div className="flex items-center">
+                                            <div className="w-12 h-12 rounded-full bg-yellow-100 border-2 border-yellow-600 mr-2"></div>
+                                            <span>Procesos</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <div className="w-12 h-8 bg-blue-100 border-2 border-blue-600 mr-2"></div>
+                                            <span>Entidades Externas</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <div className="w-12 h-6 bg-white border-2 border-purple-600 mr-2"></div>
+                                            <span>Almacenes de Datos</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <div className="h-0 w-12 border-t-2 border-gray-700 mr-2 relative">
+                                                <div className="absolute right-0 top-0 w-0 h-0 border-l-[5px] border-l-gray-700 border-t-[4px] border-t-transparent border-b-[4px] border-b-transparent" style={{transform: 'translateY(-4px)'}}></div>
+                                            </div>
+                                            <span>Flujos de Datos</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <DFDDiagram />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<CTTSDiagrams />, document.getElementById('root'));
+    </script>
+</body>
+</html>
